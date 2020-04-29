@@ -741,10 +741,11 @@ class ChannelsOverride(dict):
 
     def _send(self):
         if self._active:
+            print("Setting RC overrides!!!")
             overrides = [0] * 8
             for k, v in self.items():
                 overrides[int(k) - 1] = v
-            self._vehicle._master.mav.rc_channels_override_send(0, 0, *overrides)
+            self._vehicle._master.mav.rc_channels_override_send(1, 0, *overrides)
 
 
 class Channels(dict):
@@ -1197,6 +1198,8 @@ class Vehicle(HasObservers):
             self._ekf_constposmode = (m.flags & ardupilotmega.EKF_CONST_POS_MODE) > 0
             # boolean: EKF's predicted horizontal position (absolute) estimate is good
             self._ekf_predposhorizabs = (m.flags & ardupilotmega.EKF_PRED_POS_HORIZ_ABS) > 0
+            # boolean: EKF's predicted horizontal position (relative) estimate is good
+            self._ekf_predposhorizrel = (m.flags & ardupilotmega.EKF_PRED_POS_HORIZ_REL) > 0
 
             self.notify_attribute_listeners('ekf_ok', self.ekf_ok, cache=True)
 
@@ -1775,6 +1778,19 @@ class Vehicle(HasObservers):
         return self.mode != 'INITIALISING' and (self.gps_0.fix_type is not None and self.gps_0.fix_type > 1) and self._ekf_predposhorizabs
 
     @property
+    def is_armable_nogps(self):
+        """
+        Returns ``True`` if the vehicle is ready to arm, false otherwise (``Boolean``).
+        This attribute wraps a number of pre-arm checks, ensuring that the vehicle has booted,
+        the rangefinder is working and the EKF pre-arm for optical flow sensor is complete. 
+        This attribute is intended for indoor applications with optical flow and rangefinder.
+        """
+        # check that the mode is not INITIALISING
+        # check that rangefinder is working
+        # check that EKF pre-arm for optical flow sensor is complete
+        return self.mode != 'INITIALISING' and (not(self.rangefinder is None) and self.rangefinder.distance>0.1) and self._ekf_predposhorizrel
+
+    @property
     def system_status(self):
         """
         System status (:py:class:`SystemStatus`).
@@ -2028,6 +2044,18 @@ class Vehicle(HasObservers):
             return self.is_armable
 
         self.wait_for(check_armable, timeout=timeout)
+
+    def wait_for_armable_nogps(self, timeout=None):
+        '''Wait for the vehicle to become armable.
+
+        If timeout is nonzero, raise a TimeoutError if the vehicle
+        is not armable after timeout seconds.
+        '''
+
+        def check_armable_nogps():
+            return self.is_armable_nogps
+
+        self.wait_for(check_armable_nogps, timeout=timeout)
 
     def arm(self, wait=True, timeout=None):
         '''Arm the vehicle.
