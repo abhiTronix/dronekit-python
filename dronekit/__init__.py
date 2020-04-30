@@ -1775,7 +1775,7 @@ class Vehicle(HasObservers):
         # check that mode is not INITIALSING
         # check that we have a GPS fix
         # check that EKF pre-arm is complete
-        return self.mode != 'INITIALISING' and (self.gps_0.fix_type is not None and self.gps_0.fix_type > 1) and self._ekf_predposhorizabs
+        return self.mode != 'INITIALISING' and (self.gps_0.fix_type is not None and self.gps_0.fix_type > 2) and (self.gps_0.satellites_visible is not None and self.gps_0.satellites_visible > 5) and (self._ekf_predposhorizabs or self._ekf_predposhorizrel)
 
     @property
     def is_armable_nogps(self):
