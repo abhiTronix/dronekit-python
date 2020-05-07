@@ -3007,7 +3007,7 @@ class CommandSequence(object):
         '''
 
         # Add home point again.
-        self.wait_ready()
+        #self.wait_ready()
         home = None
         try:
             home = self._vehicle._wploader.wp(0)
